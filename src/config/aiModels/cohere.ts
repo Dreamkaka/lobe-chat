@@ -8,15 +8,17 @@ const cohereChatModels: AIChatModelCard[] = [
     contextWindowTokens: 256_000,
     description:
       'Command A 是我们迄今为止性能最强的模型，在工具使用、代理、检索增强生成（RAG）和多语言应用场景方面表现出色。Command A 具有 256K 的上下文长度，仅需两块 GPU 即可运行，并且相比于 Command R+ 08-2024，吞吐量提高了 150%。',
-    displayName: 'Command A 03-2025',
+    displayName: 'Command A 2503',
     enabled: true,
     id: 'command-a-03-2025',
     maxOutput: 8000,
     pricing: {
-      input: 2.5,
-      output: 10
+      units: [
+        { name: 'textInput', rate: 2.5, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 10, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     abilities: {
@@ -25,15 +27,16 @@ const cohereChatModels: AIChatModelCard[] = [
     contextWindowTokens: 128_000,
     description:
       'command-r-plus 是 command-r-plus-04-2024 的别名，因此如果您在 API 中使用 command-r-plus，实际上指向的就是该模型。',
-    displayName: 'Command R+',
-    enabled: true,
-    id: 'command-r-plus',
+    displayName: 'Command R+ 2404',
+    id: 'command-r-plus-04-2024',
     maxOutput: 4000,
     pricing: {
-      input: 2.5,
-      output: 10
+      units: [
+        { name: 'textInput', rate: 3, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 15, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     abilities: {
@@ -42,31 +45,17 @@ const cohereChatModels: AIChatModelCard[] = [
     contextWindowTokens: 128_000,
     description:
       'Command R+ 是一个遵循指令的对话模型，在语言任务方面表现出更高的质量、更可靠，并且相比以往模型具有更长的上下文长度。它最适用于复杂的 RAG 工作流和多步工具使用。',
-    displayName: 'Command R+ 04-2024',
-    id: 'command-r-plus-04-2024',
-    maxOutput: 4000,
-    pricing: {
-      input: 3,
-      output: 15
-    },
-    type: 'chat'
-  },
-  {
-    abilities: {
-      functionCall: true,
-    },
-    contextWindowTokens: 128_000,
-    description:
-      'command-r 是 command-c-03-2024 的别名，因此如果您在 API 中使用 command-r，实际上指向的就是该模型。',
-    displayName: 'Command R',
+    displayName: 'Command R+ 2408',
     enabled: true,
-    id: 'command-r',
+    id: 'command-r-plus-08-2024',
     maxOutput: 4000,
     pricing: {
-      input: 0.15,
-      output: 0.6
+      units: [
+        { name: 'textInput', rate: 2.5, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 10, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     abilities: {
@@ -74,15 +63,35 @@ const cohereChatModels: AIChatModelCard[] = [
     },
     contextWindowTokens: 128_000,
     description:
-      'command-r-08-2024 是 Command R 模型的更新版本，于 2024 年 8 月发布。',
-    displayName: 'Command R 08-2024',
+      'command-r 是一种遵循指令的会话模型，与以前的模型相比，它以更高的质量、更可靠的方式和更长的上下文执行语言任务。它可用于复杂的工作流程，如代码生成、检索增强生成（RAG）、工具使用和代理。',
+    displayName: 'Command R 2403',
+    id: 'command-r-03-2024',
+    maxOutput: 4000,
+    pricing: {
+      units: [
+        { name: 'textInput', rate: 0.15, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 0.6, strategy: 'fixed', unit: 'millionTokens' },
+      ],
+    },
+    type: 'chat',
+  },
+  {
+    abilities: {
+      functionCall: true,
+    },
+    contextWindowTokens: 128_000,
+    description: 'command-r-08-2024 是 Command R 模型的更新版本，于 2024 年 8 月发布。',
+    displayName: 'Command R 2408',
+    enabled: true,
     id: 'command-r-08-2024',
     maxOutput: 4000,
     pricing: {
-      input: 0.15,
-      output: 0.6
+      units: [
+        { name: 'textInput', rate: 0.15, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 0.6, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     abilities: {
@@ -91,14 +100,16 @@ const cohereChatModels: AIChatModelCard[] = [
     contextWindowTokens: 128_000,
     description:
       'Command R 是一个遵循指令的对话模型，在语言任务方面表现出更高的质量、更可靠，并且相比以往模型具有更长的上下文长度。它可用于复杂的工作流程，如代码生成、检索增强生成（RAG）、工具使用和代理。',
-    displayName: 'Command R 03-2024',
+    displayName: 'Command R 2403',
     id: 'command-r-03-2024',
     maxOutput: 4000,
     pricing: {
-      input: 0.5,
-      output: 1.5
+      units: [
+        { name: 'textInput', rate: 0.5, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 1.5, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     abilities: {
@@ -107,29 +118,31 @@ const cohereChatModels: AIChatModelCard[] = [
     contextWindowTokens: 128_000,
     description:
       'command-r7b-12-2024 是一个小型且高效的更新版本，于 2024 年 12 月发布。它在 RAG、工具使用、代理等需要复杂推理和多步处理的任务中表现出色。',
-    displayName: 'Command R7B 12-2024',
-    enabled: true,
+    displayName: 'Command R7B 2412',
     id: 'command-r7b-12-2024',
     maxOutput: 4000,
     pricing: {
-      input: 0.0375,
-      output: 0.15
+      units: [
+        { name: 'textInput', rate: 0.0375, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 0.15, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     contextWindowTokens: 4000,
     description:
       '一个遵循指令的对话模型，在语言任务中表现出高质量、更可靠，并且相比我们的基础生成模型具有更长的上下文长度。',
     displayName: 'Command',
-    enabled: true,
     id: 'command',
     maxOutput: 4000,
     pricing: {
-      input: 1,
-      output: 2
+      units: [
+        { name: 'textInput', rate: 1, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 2, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     abilities: {
@@ -142,24 +155,26 @@ const cohereChatModels: AIChatModelCard[] = [
     id: 'command-nightly',
     maxOutput: 4000,
     pricing: {
-      input: 1,
-      output: 2
+      units: [
+        { name: 'textInput', rate: 1, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 2, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     contextWindowTokens: 4000,
-    description:
-      '一个更小、更快的 Command 版本，几乎同样强大，但速度更快。',
+    description: '一个更小、更快的 Command 版本，几乎同样强大，但速度更快。',
     displayName: 'Command Light',
-    enabled: true,
     id: 'command-light',
     maxOutput: 4000,
     pricing: {
-      input: 0.3,
-      output: 0.6
+      units: [
+        { name: 'textInput', rate: 0.3, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 0.6, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     contextWindowTokens: 4000,
@@ -169,10 +184,12 @@ const cohereChatModels: AIChatModelCard[] = [
     id: 'command-light-nightly',
     maxOutput: 4000,
     pricing: {
-      input: 0.3,
-      output: 0.6
+      units: [
+        { name: 'textInput', rate: 0.3, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 0.6, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     contextWindowTokens: 128_000,
@@ -183,10 +200,12 @@ const cohereChatModels: AIChatModelCard[] = [
     id: 'c4ai-aya-expanse-32b',
     maxOutput: 4000,
     pricing: {
-      input: 0.5,
-      output: 1.5
+      units: [
+        { name: 'textInput', rate: 0.5, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 1.5, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     contextWindowTokens: 8000,
@@ -197,10 +216,12 @@ const cohereChatModels: AIChatModelCard[] = [
     id: 'c4ai-aya-expanse-8b',
     maxOutput: 4000,
     pricing: {
-      input: 0.5,
-      output: 1.5
+      units: [
+        { name: 'textInput', rate: 0.5, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 1.5, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     abilities: {
@@ -214,10 +235,12 @@ const cohereChatModels: AIChatModelCard[] = [
     id: 'c4ai-aya-vision-32b',
     maxOutput: 4000,
     pricing: {
-      input: 0.5,
-      output: 1.5
+      units: [
+        { name: 'textInput', rate: 0.5, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 1.5, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
   {
     abilities: {
@@ -231,12 +254,14 @@ const cohereChatModels: AIChatModelCard[] = [
     id: 'c4ai-aya-vision-8b',
     maxOutput: 4000,
     pricing: {
-      input: 0.5,
-      output: 1.5
+      units: [
+        { name: 'textInput', rate: 0.5, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 1.5, strategy: 'fixed', unit: 'millionTokens' },
+      ],
     },
-    type: 'chat'
+    type: 'chat',
   },
-]
+];
 
 export const allModels = [...cohereChatModels];
 

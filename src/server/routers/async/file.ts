@@ -13,9 +13,9 @@ import { FileModel } from '@/database/models/file';
 import { NewChunkItem, NewEmbeddingsItem } from '@/database/schemas';
 import { asyncAuthedProcedure, asyncRouter as router } from '@/libs/trpc/async';
 import { getServerDefaultFilesConfig } from '@/server/globalConfig';
-import { initAgentRuntimeWithUserPayload } from '@/server/modules/AgentRuntime';
-import { S3 } from '@/server/modules/S3';
+import { initModelRuntimeWithUserPayload } from '@/server/modules/ModelRuntime';
 import { ChunkService } from '@/server/services/chunk';
+import { FileService } from '@/server/services/file';
 import {
   AsyncTaskError,
   AsyncTaskErrorType,
@@ -32,9 +32,10 @@ const fileProcedure = asyncAuthedProcedure.use(async (opts) => {
     ctx: {
       asyncTaskModel: new AsyncTaskModel(ctx.serverDB, ctx.userId),
       chunkModel: new ChunkModel(ctx.serverDB, ctx.userId),
-      chunkService: new ChunkService(ctx.userId),
+      chunkService: new ChunkService(ctx.serverDB, ctx.userId),
       embeddingModel: new EmbeddingModel(ctx.serverDB, ctx.userId),
       fileModel: new FileModel(ctx.serverDB, ctx.userId),
+      fileService: new FileService(ctx.serverDB, ctx.userId),
     },
   });
 });
@@ -90,7 +91,7 @@ export const fileRouter = router({
             await pMap(
               requestArray,
               async (chunks, index) => {
-                const agentRuntime = await initAgentRuntimeWithUserPayload(
+                const agentRuntime = await initModelRuntimeWithUserPayload(
                   provider,
                   ctx.jwtPayload,
                 );
@@ -162,11 +163,9 @@ export const fileRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'File not found' });
       }
 
-      const s3 = new S3();
-
       let content: Uint8Array | undefined;
       try {
-        content = await s3.getFileByteArray(file.url);
+        content = await ctx.fileService.getFileByteArray(file.url);
       } catch (e) {
         console.error(e);
         // if file not found, delete it from db

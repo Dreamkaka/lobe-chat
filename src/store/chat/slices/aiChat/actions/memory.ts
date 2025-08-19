@@ -1,3 +1,4 @@
+import { TraceNameMap } from '@lobechat/types';
 import { StateCreator } from 'zustand/vanilla';
 
 import { chainSummaryHistory } from '@/chains/summaryHistory';
@@ -29,8 +30,12 @@ export const chatMemory: StateCreator<
       onFinish: async (text) => {
         historySummary = text;
       },
-
       params: { ...chainSummaryHistory(messages), model, provider, stream: false },
+      trace: {
+        sessionId: get().activeId,
+        topicId: get().activeTopicId,
+        traceName: TraceNameMap.SummaryHistoryMessages,
+      },
     });
 
     await topicService.updateTopic(topicId, {
