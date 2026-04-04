@@ -1,9 +1,9 @@
-import { ClientSecretPayload } from '@/const/auth';
+import { type LobeChatDatabase } from '@lobechat/database';
+
 import { AsyncTaskModel } from '@/database/models/asyncTask';
 import { FileModel } from '@/database/models/file';
-import { LobeChatDatabase } from '@/database/type';
-import { ChunkContentParams, ContentChunk } from '@/server/modules/ContentChunk';
-import { createAsyncCaller } from '@/server/routers/async';
+import { type ChunkContentParams } from '@/server/modules/ContentChunk';
+import { ContentChunk } from '@/server/modules/ContentChunk';
 import {
   AsyncTaskError,
   AsyncTaskErrorType,
@@ -30,7 +30,7 @@ export class ChunkService {
     return this.chunkClient.chunkContent(params);
   }
 
-  async asyncEmbeddingFileChunks(fileId: string, payload: ClientSecretPayload) {
+  async asyncEmbeddingFileChunks(fileId: string) {
     const result = await this.fileModel.findById(fileId);
 
     if (!result) return;
@@ -43,7 +43,10 @@ export class ChunkService {
 
     await this.fileModel.update(fileId, { embeddingTaskId: asyncTaskId });
 
-    const asyncCaller = await createAsyncCaller({ jwtPayload: payload, userId: this.userId });
+    // Async router will read keyVaults from DB, no need to pass jwtPayload
+    // Dynamic import to avoid circular dependency
+    const { createAsyncCaller } = await import('@/server/routers/async');
+    const asyncCaller = await createAsyncCaller({ userId: this.userId });
 
     // trigger embedding task asynchronously
     try {
@@ -66,7 +69,7 @@ export class ChunkService {
   /**
    * parse file to chunks with async task
    */
-  async asyncParseFileToChunks(fileId: string, payload: ClientSecretPayload, skipExist?: boolean) {
+  async asyncParseFileToChunks(fileId: string, skipExist?: boolean) {
     const result = await this.fileModel.findById(fileId);
 
     if (!result) return;
@@ -82,10 +85,13 @@ export class ChunkService {
 
     await this.fileModel.update(fileId, { chunkTaskId: asyncTaskId });
 
-    const asyncCaller = await createAsyncCaller({ jwtPayload: payload, userId: this.userId });
+    // Async router will read keyVaults from DB, no need to pass jwtPayload
+    // Dynamic import to avoid circular dependency
+    const { createAsyncCaller } = await import('@/server/routers/async');
+    const asyncCaller = await createAsyncCaller({ userId: this.userId });
 
     // trigger parse file task asynchronously
-    asyncCaller.file.parseFileToChunks({ fileId: fileId, taskId: asyncTaskId }).catch(async (e) => {
+    asyncCaller.file.parseFileToChunks({ fileId, taskId: asyncTaskId }).catch(async (e) => {
       console.error('[ParseFileToChunks] error:', e);
 
       await this.asyncTaskModel.update(asyncTaskId, {

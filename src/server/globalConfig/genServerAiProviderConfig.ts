@@ -1,10 +1,10 @@
-import { ModelProvider } from '@lobechat/model-runtime';
+import { type ProviderConfig } from '@lobechat/types';
+import { type AiFullModelCard } from 'model-bank';
+import { ModelProvider } from 'model-bank';
+import * as AiModels from 'model-bank';
 
-import * as AiModels from '@/config/aiModels';
-import { getLLMConfig } from '@/config/llm';
-import { AiFullModelCard } from '@/types/aiModel';
-import { ProviderConfig } from '@/types/user/settings';
-import { extractEnabledModels, transformToAiModelList } from '@/utils/parseModels';
+import { getLLMConfig } from '@/envs/llm';
+import { extractEnabledModels, transformToAiModelList } from '@/utils/server/parseModels';
 
 interface ProviderSpecificConfig {
   enabled?: boolean;
@@ -19,7 +19,7 @@ export const genServerAiProvidersConfig = async (
 ) => {
   const llmConfig = getLLMConfig() as Record<string, any>;
 
-  // 并发处理所有 providers
+  // Process all providers concurrently
   const providerConfigs = await Promise.all(
     Object.values(ModelProvider).map(async (provider) => {
       const providerUpperCase = provider.toUpperCase();
@@ -34,7 +34,7 @@ export const genServerAiProvidersConfig = async (
       const modelString =
         process.env[providerConfig.modelListKey ?? `${providerUpperCase}_MODEL_LIST`];
 
-      // 并发处理 extractEnabledModels 和 transformToAiModelList
+      // Process extractEnabledModels and transformToAiModelList concurrently
       const [enabledModels, serverModelLists] = await Promise.all([
         extractEnabledModels(provider, modelString, providerConfig.withDeploymentName || false),
         transformToAiModelList({
@@ -62,7 +62,7 @@ export const genServerAiProvidersConfig = async (
     }),
   );
 
-  // 将结果转换为对象
+  // Convert the results to an object
   const config = {} as Record<string, ProviderConfig>;
   for (const { provider, config: providerConfig } of providerConfigs) {
     config[provider] = providerConfig;

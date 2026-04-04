@@ -1,4 +1,3 @@
-import debug from 'debug';
 import { sha256 } from 'js-sha256';
 import mime from 'mime';
 import { nanoid } from 'nanoid';
@@ -10,7 +9,7 @@ import { calculateThumbnailDimensions } from '@/utils/number';
 import { getYYYYmmddHHMMss } from '@/utils/time';
 import { inferFileExtensionFromImageUrl } from '@/utils/url';
 
-import { GenerationService, fetchImageFromUrl } from './index';
+import { fetchImageFromUrl, GenerationService } from './index';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -103,10 +102,12 @@ describe('GenerationService', () => {
           'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGAWqGfKwAAAABJRU5ErkJggg==';
         const dataUri = `data:image/png;charset=utf-8;base64,${base64Data}`;
 
-        // This should fail because parseDataUri only supports the strict format: data:mime/type;base64,data
-        await expect(fetchImageFromUrl(dataUri)).rejects.toThrow(
-          'Invalid data URI format: data:image/png;charset=utf-8;base64,',
-        );
+        const result = await fetchImageFromUrl(dataUri);
+
+        // parseDataUri now supports additional parameters before ;base64,
+        expect(result.mimeType).toBe('image/png;charset=utf-8');
+        expect(result.buffer).toBeInstanceOf(Buffer);
+        expect(Buffer.from(base64Data, 'base64').equals(result.buffer)).toBe(true);
       });
     });
 
@@ -129,7 +130,40 @@ describe('GenerationService', () => {
 
         const result = await fetchImageFromUrl('https://example.com/image.jpg');
 
-        expect(mockFetch).toHaveBeenCalledWith('https://example.com/image.jpg');
+        expect(mockFetch).toHaveBeenCalledWith('https://example.com/image.jpg', {
+          headers: undefined,
+        });
+        expect(result.mimeType).toBe('image/jpeg');
+        expect(result.buffer).toBeInstanceOf(Buffer);
+        expect(result.buffer.equals(mockBuffer)).toBe(true);
+      });
+
+      it('should fetch image with custom fetchHeaders', async () => {
+        const mockBuffer = Buffer.from('mock image data');
+        const mockArrayBuffer = mockBuffer.buffer.slice(
+          mockBuffer.byteOffset,
+          mockBuffer.byteOffset + mockBuffer.byteLength,
+        );
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: {
+            get: vi.fn().mockReturnValue('image/jpeg'),
+          },
+          arrayBuffer: vi.fn().mockResolvedValue(mockArrayBuffer),
+        });
+
+        const customHeaders = {
+          'Authorization': 'Bearer token123',
+          'X-API-Key': 'api-key-456',
+        };
+
+        const result = await fetchImageFromUrl('https://example.com/image.jpg', customHeaders);
+
+        expect(mockFetch).toHaveBeenCalledWith('https://example.com/image.jpg', {
+          headers: customHeaders,
+        });
         expect(result.mimeType).toBe('image/jpeg');
         expect(result.buffer).toBeInstanceOf(Buffer);
         expect(result.buffer.equals(mockBuffer)).toBe(true);
@@ -168,7 +202,9 @@ describe('GenerationService', () => {
           'Failed to fetch image from https://example.com/nonexistent.jpg: 404 Not Found',
         );
 
-        expect(mockFetch).toHaveBeenCalledWith('https://example.com/nonexistent.jpg');
+        expect(mockFetch).toHaveBeenCalledWith('https://example.com/nonexistent.jpg', {
+          headers: undefined,
+        });
       });
 
       it('should throw error when network request fails', async () => {
@@ -406,7 +442,7 @@ describe('GenerationService', () => {
       const url = 'https://example.com/image';
       vi.mocked(inferFileExtensionFromImageUrl).mockReturnValue('');
 
-      // Mock fetch for HTTP URL
+      // Mock fetch for HTTP URL - return a MIME type that can't be resolved to extension
       const mockArrayBuffer = mockOriginalBuffer.buffer.slice(
         mockOriginalBuffer.byteOffset,
         mockOriginalBuffer.byteOffset + mockOriginalBuffer.byteLength,
@@ -415,7 +451,7 @@ describe('GenerationService', () => {
         ok: true,
         status: 200,
         headers: {
-          get: vi.fn().mockReturnValue('image/jpeg'),
+          get: vi.fn().mockReturnValue('application/octet-stream'), // Changed to unresolvable MIME type
         },
         arrayBuffer: vi.fn().mockResolvedValue(mockArrayBuffer),
       });

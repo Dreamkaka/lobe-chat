@@ -1,9 +1,8 @@
-import { Highlighter } from '@lobehub/ui';
+import { Flexbox, Highlighter } from '@lobehub/ui';
 import { memo, useEffect, useMemo } from 'react';
-import { Flexbox } from 'react-layout-kit';
 
 import { useChatStore } from '@/store/chat';
-import { chatPortalSelectors, chatSelectors } from '@/store/chat/selectors';
+import { chatPortalSelectors, messageStateSelectors } from '@/store/chat/selectors';
 import { ArtifactDisplayMode } from '@/store/chat/slices/portal/initialState';
 import { ArtifactType } from '@/types/artifact';
 
@@ -24,7 +23,7 @@ const ArtifactsUI = memo(() => {
     return [
       messageId,
       s.portalArtifactDisplayMode,
-      chatSelectors.isMessageGenerating(messageId)(s),
+      messageStateSelectors.isMessageGenerating(messageId)(s),
       chatPortalSelectors.artifactType(s),
       chatPortalSelectors.artifactCode(messageId)(s),
       chatPortalSelectors.artifactCodeLanguage(s),
@@ -60,14 +59,15 @@ const ArtifactsUI = memo(() => {
     }
   }, [artifactType, artifactCodeLanguage]);
 
-  // make sure the message and id is valid
-  if (!messageId) return;
-
   // show code when the artifact is not closed or the display mode is code or the artifact type is code
   const showCode =
     !isArtifactTagClosed ||
     displayMode === ArtifactDisplayMode.Code ||
     artifactType === ArtifactType.Code;
+  const isStreamingCode = isMessageGenerating && !isArtifactTagClosed;
+
+  // make sure the message and id is valid
+  if (!messageId) return;
 
   return (
     <Flexbox
@@ -79,12 +79,15 @@ const ArtifactsUI = memo(() => {
       style={{ overflow: 'hidden' }}
     >
       {showCode ? (
-        <Highlighter
-          language={language || 'txt'}
-          style={{ fontSize: 12, height: '100%', overflow: 'auto' }}
-        >
-          {artifactContent}
-        </Highlighter>
+        <Flexbox flex={1} style={{ minHeight: 0, overflow: 'auto' }}>
+          <Highlighter
+            animated={isStreamingCode}
+            language={language || 'txt'}
+            style={{ fontSize: 12, minHeight: '100%', overflow: 'visible' }}
+          >
+            {artifactContent}
+          </Highlighter>
+        </Flexbox>
       ) : (
         <Renderer content={artifactContent} type={artifactType} />
       )}

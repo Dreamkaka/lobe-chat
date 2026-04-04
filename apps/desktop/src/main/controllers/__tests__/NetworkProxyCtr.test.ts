@@ -1,9 +1,13 @@
-import { NetworkProxySettings } from '@lobechat/electron-client-ipc';
+import type { NetworkProxySettings } from '@lobechat/electron-client-ipc';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { App } from '@/core/App';
 
 import NetworkProxyCtr from '../NetworkProxyCtr';
+
+const { ipcMainHandleMock } = vi.hoisted(() => ({
+  ipcMainHandleMock: vi.fn(),
+}));
 
 // 模拟 logger
 vi.mock('@/utils/logger', () => ({
@@ -54,6 +58,7 @@ describe('NetworkProxyCtr', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    ipcMainHandleMock.mockClear();
 
     // 动态导入 undici Mock
     mockUndici = await import('undici');
@@ -418,3 +423,8 @@ describe('NetworkProxyCtr', () => {
     });
   });
 });
+vi.mock('electron', () => ({
+  ipcMain: {
+    handle: ipcMainHandleMock,
+  },
+}));

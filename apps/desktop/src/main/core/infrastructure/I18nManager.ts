@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import i18next from 'i18next';
 
-import { App } from '@/core/App';
+import type { App } from '@/core/App';
 import { loadResources } from '@/locales/resources';
 import { createLogger } from '@/utils/logger';
 
@@ -31,7 +31,7 @@ export class I18nManager {
     // Priority: parameter language > stored locale > system language
     const storedLocale = this.app.storeManager.get('locale', 'auto') as string;
     const defaultLanguage =
-      lang || (storedLocale !== 'auto' ? storedLocale : app.getLocale()) || 'en-US';
+      lang || (storedLocale !== 'auto' ? storedLocale : app.getLocale()) || 'en';
 
     logger.info(
       `Initializing i18n, app locale: ${defaultLanguage}, stored locale: ${storedLocale}`,
@@ -39,15 +39,15 @@ export class I18nManager {
 
     await this.i18n.init({
       defaultNS: 'menu',
-      fallbackLng: 'en-US',
+      fallbackLng: 'en',
       // Load resources as needed
       initAsync: true,
       interpolation: {
         escapeValue: false,
       },
 
+      keySeparator: false,
       lng: defaultLanguage,
-
       ns: ['menu', 'dialog', 'common'],
       partialBundledLanguages: true,
     });
@@ -89,9 +89,8 @@ export class I18nManager {
   createNamespacedT(namespace: string) {
     return (key: string, options: any = {}) => {
       // Copy options to avoid modifying the original object
-      const mergedOptions = { ...options };
+      const mergedOptions = { ...options , ns: namespace,};
       // Set namespace
-      mergedOptions.ns = namespace;
 
       return this.t(key, mergedOptions);
     };
@@ -149,17 +148,6 @@ export class I18nManager {
    */
   private notifyRendererProcess(lng: string) {
     logger.debug(`Notifying renderer process of language change: ${lng}`);
-
-    // Send language change event to all windows
-    // const windows = this.app.browserManager.windows;
-    //
-    // if (windows && windows.length > 0) {
-    //   windows.forEach((window) => {
-    //     if (window?.webContents) {
-    //       window.webContents.send('language-changed', lng);
-    //     }
-    //   });
-    // }
   }
 
   private async loadLocale(language: string) {
@@ -175,6 +163,7 @@ export class I18nManager {
     try {
       logger.debug(`Loading namespace: ${lng}/${ns}`);
       const resources = await loadResources(lng, ns);
+
       this.i18n.addResourceBundle(lng, ns, resources, true, true);
       return true;
     } catch (error) {

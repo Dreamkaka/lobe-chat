@@ -1,12 +1,12 @@
+import { type LobeChatDatabase } from '@lobechat/database';
+import { parseDataUri } from '@lobechat/model-runtime';
 import debug from 'debug';
 import { sha256 } from 'js-sha256';
 import mime from 'mime';
+import { IMAGE_GENERATION_CONFIG } from 'model-bank';
 import { nanoid } from 'nanoid';
 import sharp from 'sharp';
 
-import { IMAGE_GENERATION_CONFIG } from '@/const/imageGeneration';
-import { LobeChatDatabase } from '@/database/type';
-import { parseDataUri } from '@/libs/model-runtime/utils/uriParser';
 import { FileService } from '@/server/services/file';
 import { calculateThumbnailDimensions } from '@/utils/number';
 import { getYYYYmmddHHMMss } from '@/utils/time';
@@ -17,29 +17,40 @@ const log = debug('lobe-image:generation-service');
 /**
  * Fetch image buffer and MIME type from URL or base64 data
  * @param url - Image URL or base64 data URI
+ * @param fetchHeaders - Optional headers for authentication
  * @returns Object containing buffer and MIME type
  */
-export async function fetchImageFromUrl(url: string): Promise<{
+export async function fetchImageFromUrl(
+  url: string,
+  fetchHeaders?: Record<string, string>,
+): Promise<{
   buffer: Buffer;
   mimeType: string;
 }> {
   if (url.startsWith('data:')) {
+    log('Data URI length:', url.length);
+
+    log('parseDataUri: start');
     const { base64, mimeType, type } = parseDataUri(url);
+    log('parseDataUri: done, base64 length:', base64?.length, 'mimeType:', mimeType);
 
     if (type !== 'base64' || !base64 || !mimeType) {
       throw new Error(`Invalid data URI format: ${url}`);
     }
 
     try {
+      log('Buffer.from base64: start');
       const buffer = Buffer.from(base64, 'base64');
+      log('Buffer.from base64: done, buffer size:', buffer.length);
       return { buffer, mimeType };
     } catch (error) {
       throw new Error(
         `Failed to decode base64 data: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
       );
     }
   } else {
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: fetchHeaders });
     if (!response.ok) {
       throw new Error(
         `Failed to fetch image from ${url}: ${response.status} ${response.statusText}`,
@@ -63,8 +74,8 @@ interface ImageForGeneration {
 }
 
 /**
- * 图片生成服务
- * 负责处理AI生成图片的转换、上传和封面创建
+ * Image generation service
+ * Handles conversion, upload and cover creation for AI-generated images
  */
 export class GenerationService {
   private fileService: FileService;
@@ -76,19 +87,29 @@ export class GenerationService {
   /**
    * Generate width 512px image as thumbnail when width > 512, end with _512.webp
    */
-  async transformImageForGeneration(url: string): Promise<{
+  async transformImageForGeneration(
+    url: string,
+    fetchHeaders?: Record<string, string>,
+  ): Promise<{
     image: ImageForGeneration;
     thumbnailImage: ImageForGeneration;
   }> {
     log('Starting image transformation for:', url.startsWith('data:') ? 'base64 data' : url);
 
     // Fetch image buffer and MIME type using utility function
-    const { buffer: originalImageBuffer, mimeType: originalMimeType } =
-      await fetchImageFromUrl(url);
+    log('fetchImageFromUrl: start');
+    const { buffer: originalImageBuffer, mimeType: originalMimeType } = await fetchImageFromUrl(
+      url,
+      fetchHeaders,
+    );
+    log('fetchImageFromUrl: done, buffer size:', originalImageBuffer.length);
 
     // Calculate hash for original image
+    log('sha256: start');
     const originalHash = sha256(originalImageBuffer);
+    log('sha256: done');
 
+    log('sharp metadata: start');
     const sharpInstance = sharp(originalImageBuffer);
     const { format, width, height } = await sharpInstance.metadata();
     log('Image metadata:', { format, height, width });
@@ -130,7 +151,30 @@ export class GenerationService {
       }
       extension = mimeExtension;
     } else {
+      // Try to get extension from URL path first
       extension = inferFileExtensionFromImageUrl(url);
+
+      // For ComfyUI URLs, check filename in query parameters
+      if (!extension && url.includes('filename=')) {
+        try {
+          const urlObj = new URL(url);
+          const filename = urlObj.searchParams.get('filename');
+          if (filename) {
+            extension = inferFileExtensionFromImageUrl(filename);
+          }
+        } catch {
+          // Ignore URL parsing errors
+        }
+      }
+
+      // If still no extension, try to get from MIME type
+      if (!extension && originalMimeType && originalMimeType !== 'application/octet-stream') {
+        const mimeExtension = mime.getExtension(originalMimeType);
+        if (mimeExtension) {
+          extension = mimeExtension;
+        }
+      }
+
       if (!extension) {
         throw new Error(`Unable to determine file extension from URL: ${url}`);
       }

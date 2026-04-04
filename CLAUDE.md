@@ -1,117 +1,122 @@
 # CLAUDE.md
 
-This document serves as a shared guideline for all team members when using Claude Code in this repository.
+Guidelines for using Claude Code in this LobeHub repository.
 
-## Suggestions
+## Tech Stack
 
-- When searching the project source code, it is recommended to exclude: `src/database/migrations/meta`, `**/*.test.*`, `**/__snapshots__`, `**/fixtures`
-- Please store all temporary scripts (such as migration and refactoring scripts) in the `docs/.local/` directory; the contents of this folder will not be committed.
+- Next.js 16 + React 19 + TypeScript
+- SPA inside Next.js with `react-router-dom`
+- `@lobehub/ui`, antd for components; antd-style for CSS-in-JS
+- react-i18next for i18n; zustand for state management
+- SWR for data fetching; TRPC for type-safe backend
+- Drizzle ORM with PostgreSQL; Vitest for testing
 
-## Technologies Stack
-
-read @.cursor/rules/project-introduce.mdc for more details.
-
-### Directory Structure
+## Project Structure
 
 ```plaintext
-src/
-├── app/                 # Next.js App Router
-├── features/            # Feature-based UI components
-├── store/              # Zustand state stores
-├── services/           # Client services (tRPC/Model calls)
-├── server/             # Server-side (tRPC routers, services)
-├── database/           # Schemas, models, repositories
-├── libs/               # External library integrations
+lobehub/
+├── apps/desktop/           # Electron desktop app
+├── packages/               # Shared packages (@lobechat/*)
+│   ├── database/           # Database schemas, models, repositories
+│   ├── agent-runtime/      # Agent runtime
+│   └── ...
+├── src/
+│   ├── app/                # Next.js App Router (backend API + auth)
+│   │   ├── (backend)/     # API routes (trpc, webapi, etc.)
+│   │   ├── spa/            # SPA HTML template service
+│   │   └── [variants]/(auth)/  # Auth pages (SSR required)
+│   ├── routes/             # SPA page components (Vite)
+│   │   ├── (main)/         # Desktop pages
+│   │   ├── (mobile)/       # Mobile pages
+│   │   ├── (desktop)/      # Desktop-specific pages
+│   │   ├── onboarding/     # Onboarding pages
+│   │   └── share/          # Share pages
+│   ├── spa/                # SPA entry points and router config
+│   │   ├── entry.web.tsx   # Web entry
+│   │   ├── entry.mobile.tsx
+│   │   ├── entry.desktop.tsx
+│   │   └── router/         # React Router configuration
+│   ├── store/              # Zustand stores
+│   ├── services/           # Client services
+│   ├── server/             # Server services and routers
+│   └── ...
+└── e2e/                    # E2E tests (Cucumber + Playwright)
 ```
 
-### Data Flow
+## SPA Routes and Features
 
-- **Client DB Version**: UI → Zustand → Service → Model → PGLite
-- **Server DB Version**: UI → Zustand → Service → tRPC → Repository/Model → PostgreSQL
+SPA-related code is grouped under `src/spa/` (entries + router) and `src/routes/` (page segments). We use a **roots vs features** split: route trees only hold page segments; business logic and UI live in features.
+
+- **`src/spa/`** – SPA entry points (`entry.web.tsx`, `entry.mobile.tsx`, `entry.desktop.tsx`) and React Router config (`router/`). Keeps router config next to entries to avoid confusion with `src/routes/`.
+
+- **`src/routes/` (roots)**\
+  Only page-segment files: `_layout/index.tsx`, `index.tsx` (or `page.tsx`), and dynamic segments like `[id]/index.tsx`. Keep these **thin**: they should only import from `@/features/*` and compose layout/page, with no business logic or heavy UI.
+
+- **`src/features/`**\
+  Business components by **domain** (e.g. `Pages`, `PageEditor`, `Home`). Put layout chunks (sidebar, header, body), hooks, and domain-specific UI here. Each feature exposes an `index.ts` (or `index.tsx`) with clear exports.
+
+When adding or changing SPA routes:
+
+1. In `src/routes/`, add only the route segment files (layout + page) that delegate to features.
+2. Implement layout and page content under `src/features/<Domain>/` and export from there.
+3. In route files, use `import { X } from '@/features/<Domain>'` (or `import Y from '@/features/<Domain>/...'`). Do not add new `features/` folders inside `src/routes/`.
+
+See the **spa-routes** skill (`.agents/skills/spa-routes/SKILL.md`) for the full convention and file-division rules.
 
 ## Development
 
+### Starting the Dev Environment
+
+```bash
+# SPA dev mode (frontend only, proxies API to localhost:3010)
+bun run dev:spa
+
+# Full-stack dev (Next.js + Vite SPA concurrently)
+bun run dev
+```
+
+After `dev:spa` starts, the terminal prints a **Debug Proxy** URL:
+
+```plaintext
+Debug Proxy: https://app.lobehub.com/_dangerous_local_dev_proxy?debug-host=http%3A%2F%2Flocalhost%3A9876
+```
+
+Open this URL to develop locally against the production backend (app.lobehub.com). The proxy page loads your local Vite dev server's SPA into the online environment, enabling HMR with real server config.
+
 ### Git Workflow
 
-- use rebase for git pull.
-- git commit message should prefix with gitmoji.
-- git branch name format example: tj/feat/feature-name
-- use .github/PULL_REQUEST_TEMPLATE.md to generate pull request description
+- **Branch strategy**: `canary` is the development branch (cloud production); `main` is the release branch (periodically cherry-picks from canary)
+- New branches should be created from `canary`; PRs should target `canary`
+- Use rebase for `git pull`
+- Commit messages: prefix with gitmoji
+- Branch format: `<type>/<feature-name>`
 
 ### Package Management
 
-this is a monorepo project and we use `pnpm` as package manager
-
-### TypeScript Code Style Guide
-
-see @.cursor/rules/typescript.mdc
-
-### Modify Code Rules
-
-- **Code Language**:
-  - For files with existing Chinese comments: Continue using Chinese to maintain consistency
-  - For new files or files without Chinese comments: MUST use American English.
-    - eg: new react tsx file and new test file
-- Conservative for existing code, modern approaches for new features
+- `pnpm` for dependency management
+- `bun` to run npm scripts
+- `bunx` for executable npm packages
 
 ### Testing
 
-Testing work follows the Rule-Aware Task Execution system above.
+```bash
+# Run specific test (NEVER run `bun run test` - takes ~10 minutes)
+bunx vitest run --silent='passed-only' '[file-path]'
 
-- **Required Rule**: `testing-guide/testing-guide.mdc`
-- **Command**: `npx vitest run --config vitest.config.ts '[file-path-pattern]'`, wrapped in single quotes to avoid shell expansion
+# Database package
+cd packages/database && bunx vitest run --silent='passed-only' '[file]'
+```
 
-**Important**:
+- Prefer `vi.spyOn` over `vi.mock`
+- Tests must pass type check: `bun run type-check`
+- After 2 failed fix attempts, stop and ask for help
 
-- Never run `bun run test` etc to run tests, this will run all tests and cost about 10mins
-- If try to fix the same test twice, but still failed, stop and ask for help.
+### i18n
 
-### Typecheck
+- Add keys to `src/locales/default/namespace.ts`
+- For dev preview: translate `locales/zh-CN/` and `locales/en-US/`
+- Don't run `pnpm i18n` - CI handles it
 
-- use `bun run type-check` to check type errors.
+## Skills (Auto-loaded by Claude)
 
-### Internationalization
-
-- **Keys**: Add to `src/locales/default/namespace.ts`
-- **Dev**: Translate at least `zh-CN` files for preview
-- **Structure**: Hierarchical nested objects, not flat keys
-- **Script**: DON'T run `pnpm i18n` (user/CI handles it)
-
-## Rules Index
-
-Some useful rules of this project. Read them when needed.
-
-**IMPORTANT**: All rule files referenced in this document are located in the `.cursor/rules/` directory. Throughout this document, rule files are referenced by their filename only for brevity.
-
-### 📋 Complete Rule Files
-
-**Core Development**
-
-- `backend-architecture.mdc` - Three-layer architecture, data flow
-- `react-component.mdc` - antd-style, Lobe UI usage
-- `drizzle-schema-style-guide.mdc` - Schema naming, patterns
-- `define-database-model.mdc` - Model templates, CRUD patterns
-
-**State & UI**
-
-- `zustand-slice-organization.mdc` - Store organization
-- `zustand-action-patterns.mdc` - Action patterns
-- `packages/react-layout-kit.mdc` - Layout components usage
-
-**Testing & Quality**
-
-- `testing-guide/testing-guide.mdc` - Test strategy, mock patterns
-- `code-review.mdc` - Review process and standards
-
-**Desktop (Electron)**
-
-- `desktop-feature-implementation.mdc` - Main/renderer process patterns
-- `desktop-local-tools-implement.mdc` - Tool integration workflow
-- `desktop-menu-configuration.mdc` - App menu, context menu, tray menu
-- `desktop-window-management.mdc` - Window creation, state management, multi-window
-- `desktop-controller-tests.mdc` - Controller unit testing guide
-
-**Development Tools**
-
-- `i18n.mdc` - Internationalization workflow
-- `debug.mdc` - Debugging strategies
+Claude Code automatically loads relevant skills from `.agents/skills/`.

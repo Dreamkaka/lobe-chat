@@ -1,10 +1,11 @@
-import { createStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { ReactNode, useState } from 'react';
+import { type ReactNode } from 'react';
+import { useState } from 'react';
 
-const useStyles = createStyles(({ css, token }) => ({
+const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
-    margin-block-end: ${token.marginLG}px;
+    margin-block-end: ${cssVar.marginLG};
   `,
 
   header: css`
@@ -13,30 +14,30 @@ const useStyles = createStyles(({ css, token }) => ({
     display: flex;
     align-items: center;
 
-    border-radius: ${token.borderRadius}px;
+    border-radius: ${cssVar.borderRadius};
 
-    color: ${token.colorTextTertiary};
+    color: ${cssVar.colorTextTertiary};
 
-    transition: all ${token.motionDurationMid} ease;
+    transition: all ${cssVar.motionDurationMid} ease;
 
     &:hover {
-      color: ${token.colorText};
+      color: ${cssVar.colorText};
     }
   `,
 
   title: css`
     margin-inline-start: 4px;
-    font-weight: ${token.fontWeightStrong};
-    color: ${token.colorText};
+    font-weight: ${cssVar.fontWeightStrong};
+    color: ${cssVar.colorText};
   `,
 }));
 
 interface CollapsibleSectionProps {
-  /** 子组件内容 */
+  /** Child component content */
   children: ReactNode;
-  /** 默认是否展开 */
+  /** Whether expanded by default */
   defaultExpanded?: boolean;
-  /** 标题文本 */
+  /** Title text */
   title: string;
 }
 
@@ -45,7 +46,6 @@ const CollapsibleSection = ({
   children,
   defaultExpanded = false,
 }: CollapsibleSectionProps) => {
-  const { styles, cx } = useStyles();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (

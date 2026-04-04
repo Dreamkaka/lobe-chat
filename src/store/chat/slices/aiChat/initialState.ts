@@ -1,22 +1,11 @@
+import { type ChatInputEditor } from '@/features/ChatInput';
+
 export interface ChatAIChatState {
-  /**
-   * is the AI message is generating
-   */
-  chatLoadingIds: string[];
-  chatLoadingIdsAbortController?: AbortController;
   inputFiles: File[];
   inputMessage: string;
-  messageInToolsCallingIds: string[];
-  /**
-   * is the message is in RAG flow
-   */
-  messageRAGLoadingIds: string[];
-  pluginApiLoadingIds: string[];
-  /**
-   * is the AI message is reasoning
-   */
-  reasoningLoadingIds: string[];
+  mainInputEditor: ChatInputEditor | null;
   searchWorkflowLoadingIds: string[];
+  threadInputEditor: ChatInputEditor | null;
   /**
    * the tool calling stream ids
    */
@@ -24,13 +13,10 @@ export interface ChatAIChatState {
 }
 
 export const initialAiChatState: ChatAIChatState = {
-  chatLoadingIds: [],
   inputFiles: [],
   inputMessage: '',
-  messageInToolsCallingIds: [],
-  messageRAGLoadingIds: [],
-  pluginApiLoadingIds: [],
-  reasoningLoadingIds: [],
+  mainInputEditor: null,
   searchWorkflowLoadingIds: [],
+  threadInputEditor: null,
   toolCallingStreamIds: {},
 };
